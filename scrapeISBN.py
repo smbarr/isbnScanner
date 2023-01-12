@@ -1,5 +1,9 @@
+import sys
 import json
 import requests
+import select
+import pandas as pd
+from googleSheets import updateSheet
 
 base_url = "https://openlibrary.org/"
 
@@ -11,21 +15,50 @@ def scrapeISBN(isbn, return_detailed=False):
     bookurl = "%s/isbn/%d.json"%(base_url, isbn)
     bookpage = requests.get(bookurl, headers=headers)
     detailed_info = json.loads(bookpage.content.decode('utf-8'))
-    authorurl = "%s/%s.json"%(base_url, detailed_info["authors"][0]["key"])
-    authorpage = requests.get(authorurl, headers=headers)
-    author = json.loads(authorpage.content.decode('utf-8'))["name"]
+    if "authors" in detailed_info:
+        authorurl = "%s/%s.json"%(base_url, detailed_info["authors"][0]["key"])
+        authorpage = requests.get(authorurl, headers=headers)
+        author = json.loads(authorpage.content.decode('utf-8'))["name"]
+    else:
+        author = "None"
     info = {
-        "author": author,
-        "title": detailed_info["title"],
-        "isbn": detailed_info["isbn_13"][0],
-        "format": detailed_info["physical_format"]
+        "Author": author,
+        "Title": detailed_info["title"]
     }
     if return_detailed:
-        return detailed_info
+        return info, detailed_info
     else:
         return info
 
 if __name__ == "__main__":
-    isbn = 9781558585362
-    bookinfo = scrapeISBN(isbn)
-    print(json.dumps(bookinfo, indent=2))
+    """
+    Read the database containing the books already scanned
+    """
+    books = pd.read_csv("books.csv", index_col=0)
+
+    while True:
+        res = input()
+        try:
+            """
+            Get ISBN from stdin
+            """
+            isbn = int(res)
+            bookinfo, detailed_info = scrapeISBN(isbn, return_detailed=True)
+            print("%s by %s"%(bookinfo["Title"], bookinfo["Author"]))
+
+            """
+            Check if book is already stored, if not append it to database
+            """
+            if not isbn in books.index:
+                df = pd.DataFrame(index=[isbn], data=bookinfo)
+                books = pd.concat([books, df])
+                books.to_csv("books.csv")
+                updateSheet()
+
+            """
+            Save detailed info to a separate json file
+            """
+            with open("bookdata/%d.json"%(isbn), "w") as f:
+                f.write(json.dumps(detailed_info, indent=2))
+        except:
+            print("Error reading: %s"%(res))
