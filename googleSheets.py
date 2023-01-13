@@ -38,7 +38,7 @@ def getCredentials():
     return creds
 
 def updateSheet():
-    df = pd.read_csv("books.csv")
+    df = pd.read_csv("books.csv").sort_values(by="Title")
     data = [["Author", "Title"]]
     for a, t in zip(df["Author"], df["Title"]):
         data.append([a,t])
