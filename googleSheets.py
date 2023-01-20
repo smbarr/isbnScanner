@@ -33,6 +33,9 @@ def getCredentials():
                 '/home/sbarr/.credentials/client_secret_841061229898-vaii159sgjmuouj9mc596991n6sqes65.apps.googleusercontent.com.json', SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
+        """
+        This can cause an error if the token expires. It should be deleted on an exception
+        """
         with open('/home/sbarr/.credentials/token.json', 'w') as token:
             token.write(creds.to_json())
     return creds
