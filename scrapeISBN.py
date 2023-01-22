@@ -21,9 +21,14 @@ def scrapeISBN(isbn, return_detailed=False):
         author = json.loads(authorpage.content.decode('utf-8'))["name"]
     else:
         author = "None"
+    if "physical_format" in info:
+        form = info["physical_format"]
+    else:
+        form = ""
     info = {
         "Author": author,
-        "Title": detailed_info["title"]
+        "Title": detailed_info["title"],
+        "Format": form
     }
     if return_detailed:
         return info, detailed_info
@@ -52,6 +57,7 @@ if __name__ == "__main__":
             if not isbn in books.index:
                 df = pd.DataFrame(index=[isbn], data=bookinfo)
                 books = pd.concat([books, df])
+                books.fillna("", inplace=True)
                 books.to_csv("books.csv")
                 updateSheet()
 

@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import sys
 import os.path
 import inspect
 import pandas as pd
@@ -18,15 +19,15 @@ SCOPES = [
 # The ID and range of a sample spreadsheet.
 SPREADSHEET_ID = '1x-GdRumb0zFBbZz6AZLbRmnBNQcWieJD9-bsjtEZ0zI'
 
-def getCredentials():
+def getCredentials(updateToken=False):
     """Shows basic usage of the Sheets API.
     Prints values from a sample spreadsheet.
     """
     creds = None
     if os.path.exists('/home/sbarr/.credentials/token.json'):
         creds = Credentials.from_authorized_user_file('/home/sbarr/.credentials/token.json', SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+    if not creds or not creds.valid or updateToken:
+        if creds and creds.expired and creds.refresh_token and not updateToken:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
@@ -40,19 +41,13 @@ def getCredentials():
             token.write(creds.to_json())
     return creds
 
-def updateSheet():
-    df = pd.read_csv("books.csv").sort_values(by="Title")
-    data = [["Author", "Title"]]
-    for a, t in zip(df["Author"], df["Title"]):
-        data.append([a,t])
+def updateRemote(creds, data):
+    service = build('sheets', 'v4', credentials=creds)
 
-    creds = getCredentials()
+    sheet = service.spreadsheets()
+    myRange = "Sheet1"
+
     try:
-        service = build('sheets', 'v4', credentials=creds)
-
-        sheet = service.spreadsheets()
-        myRange = "Sheet1"
-
         """
         Erase table
         """
@@ -62,24 +57,40 @@ def updateSheet():
             spreadsheetId=SPREADSHEET_ID, 
             range=myRange, 
             valueInputOption="USER_ENTERED", 
-            body={'values': [["", ""] for n in range(len(values))]}
+            body={'values': [["", "", ""] for n in range(len(values))]}
         ).execute()
-        """
-        Write new values
-        """
-        body = {
-            'values': data
-        }
-        sheet.values().update(
-            spreadsheetId=SPREADSHEET_ID, 
-            range=myRange, 
-            valueInputOption="USER_ENTERED", 
-            body=body
-        ).execute()
+    except:
+        return False
+    """
+    Write new values
+    """
+    body = {
+        'values': data
+    }
+    sheet.values().update(
+        spreadsheetId=SPREADSHEET_ID, 
+        range=myRange, 
+        valueInputOption="USER_ENTERED", 
+        body=body
+    ).execute()
 
-    except HttpError as err:
-        print("Error updating google sheet")
-        print(err)
+    return True
+
+def updateSheet():
+    df = pd.read_csv("books.csv").sort_values(by="Title")
+    df.fillna("", inplace=True)
+    data = [["Author", "Title", "Format"]]
+    for a, t, f in zip(df["Author"], df["Title"], df["Format"]):
+        data.append([a,t,f])
+
+    creds = getCredentials()
+    success = updateRemote(creds, data)
+    if not success:
+        creds = getCredentials(updateToken=True)
+        success = updateRemote(creds, data)
+        if not success:
+            print("Error updating google sheet")
+            #print(err)
 
 if __name__ == "__main__":
     updateSheet()
