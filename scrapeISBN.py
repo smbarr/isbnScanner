@@ -21,8 +21,8 @@ def scrapeISBN(isbn, return_detailed=False):
         author = json.loads(authorpage.content.decode('utf-8'))["name"]
     else:
         author = "None"
-    if "physical_format" in info:
-        form = info["physical_format"]
+    if "physical_format" in detailed_info:
+        form = detailed_info["physical_format"]
     else:
         form = ""
     info = {
@@ -43,28 +43,28 @@ if __name__ == "__main__":
 
     while True:
         res = input()
-        try:
-            """
-            Get ISBN from stdin
-            """
-            isbn = int(res)
-            bookinfo, detailed_info = scrapeISBN(isbn, return_detailed=True)
-            print("%s by %s"%(bookinfo["Title"], bookinfo["Author"]))
+        #try:
+        """
+        Get ISBN from stdin
+        """
+        isbn = int(res)
+        bookinfo, detailed_info = scrapeISBN(isbn, return_detailed=True)
+        print("%s by %s"%(bookinfo["Title"], bookinfo["Author"]))
 
-            """
-            Check if book is already stored, if not append it to database
-            """
-            if not isbn in books.index:
-                df = pd.DataFrame(index=[isbn], data=bookinfo)
-                books = pd.concat([books, df])
-                books.fillna("", inplace=True)
-                books.to_csv("books.csv")
-                updateSheet()
+        """
+        Check if book is already stored, if not append it to database
+        """
+        if not isbn in books.index:
+            df = pd.DataFrame(index=[isbn], data=bookinfo)
+            books = pd.concat([books, df])
+            books.fillna("", inplace=True)
+            books.to_csv("books.csv")
+            updateSheet()
 
-            """
-            Save detailed info to a separate json file
-            """
-            with open("bookdata/%d.json"%(isbn), "w") as f:
-                f.write(json.dumps(detailed_info, indent=2))
-        except:
-            print("Error reading: %s"%(res))
+        """
+        Save detailed info to a separate json file
+        """
+        with open("bookdata/%d.json"%(isbn), "w") as f:
+            f.write(json.dumps(detailed_info, indent=2))
+        #except:
+        #    print("Error reading: %s"%(res))
