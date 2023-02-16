@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from datetime import datetime
 import sys
 import os.path
 import inspect
@@ -79,7 +80,7 @@ def updateRemote(creds, data):
 def updateSheet():
     df = pd.read_csv("books.csv").sort_values(by="Title")
     df.fillna("", inplace=True)
-    data = [["Author", "Title", "Format"]]
+    data = [[datetime.now().strftime("Updated on %B %-d, %Y at %-I:%M:%S %p"), "", ""],["Author", "Title", "Format"]]
     for a, t, f in zip(df["Author"], df["Title"], df["Format"]):
         data.append([a,t,f])
 
